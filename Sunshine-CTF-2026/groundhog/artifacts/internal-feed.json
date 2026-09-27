@@ -1,0 +1,15 @@
+{
+  "station": "PUNX-1",
+  "authority": "Punxsutawney Orbital Weather Authority",
+  "date": "FEB 2",
+  "iteration": 1574,
+  "temperature_f": 30,
+  "wind_mph": 9,
+  "pressure_mb": 1021,
+  "humidity_pct": 96,
+  "visibility_mi": 3.5,
+  "sky": "HIGH CIRRUS",
+  "shadow_seen": true,
+  "weeks_of_winter": 6,
+  "advisory": "Shadow cast. Winter continues."
+}

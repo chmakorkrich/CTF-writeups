@@ -1,0 +1,366 @@
+import os
+import secrets
+
+import jwt
+from flask import (
+    Flask,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
+
+app = Flask(__name__)
+
+FLAG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'flag.txt')
+
+
+def load_flag():
+    try:
+        with open(FLAG_PATH, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except OSError:
+        return 'flag{flag.txt-missing-from-image}'
+
+
+FLAG = load_flag()
+
+KEYS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'keys')
+IMAGES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'images')
+
+# --- Prototype signing keys -------------------------------------------------
+# TODO(launch): these belong in the CHROME HORIZON key vault, not baked into the build.
+READER_KEY = secrets.token_hex(32).encode()
+EDITOR_KEY = b'ch-pr0t0type-edit0r-s1gn1ng-k3y-d0-n0t-sh1p'
+
+
+def init_keys():
+    """Write the prototype key files the `kid` header points at."""
+    os.makedirs(KEYS_DIR, exist_ok=True)
+    with open(os.path.join(KEYS_DIR, 'reader.key'), 'wb') as f:
+        f.write(READER_KEY)
+    with open(os.path.join(KEYS_DIR, 'editor.key'), 'wb') as f:
+        f.write(EDITOR_KEY)
+
+
+init_keys()
+
+ARTICLES = [
+    {
+        'id': 'hover-conversion',
+        'kicker': 'GARAGE HOW-TO',
+        'title': 'Ditch Your Wheels by Friday: The Weekend Hover Conversion',
+        'dek': 'Four turbine pods where the wheels used to be, a quartet of '
+               'exhaust tubes slung under the belly, and one very brave '
+               'afternoon. Our matte-navy mule has not touched pavement since '
+               'April.',
+        'author': 'Reggie Rockets',
+        'date': 'June 1959',
+        'plate': 'I',
+        'image': 'car-1.jpg',
+        'readtime': '9 minutes',
+        'pull': 'Crouch at the front bumper and look underneath. If you can '
+                'see daylight where the tires ought to be, congratulations — '
+                'you have achieved lift.',
+        'body': [
+            'Every hot-rodder eventually asks the same question: why must a '
+            'car touch the ground at all? The navy speedster photographed for '
+            'this column was an entirely ordinary two-seater in March. It has '
+            'not worn a tire since, and it has not been quiet about it.',
+            'The conversion begins with subtraction. Off come the wheels, the '
+            'hubs, the springs, and the whole sorry business of suspension. '
+            'Into each arch goes a polished turbine pod, ringed with cooling '
+            'vanes and bolted to the original hub carrier. Four of them: the '
+            'rear pair do the shoving, the front pair merely hold the nose up '
+            'and pretend to steer.',
+            'The exhaust is the part your neighbors will notice. Four tubes '
+            'run back beneath the belly and exit ahead of the tail, which '
+            'keeps the hot gas off the paint and puts it, regrettably, at '
+            'ankle height. Feed the compressors through louvres cut into the '
+            'rear flank — three a side is plenty, and they look deliberate, '
+            'which matters.',
+            'Two last notes from bitter experience. Replace the windscreen '
+            'with a mesh aero screen: at hover height the grit comes over the '
+            'cowl in a steady curtain, and glass merely advertises it. And '
+            'leave the chrome overriders on both bumpers. Steering, we will '
+            'admit, remains theoretical — you will bump things.',
+        ],
+    },
+    {
+        'id': 'brown-wedge',
+        'kicker': 'STYLE',
+        'title': 'Chrome Is Over: The Long Brown Wedge Takes the Floor',
+        'dek': 'No fins, no brightwork, and no grille worth the name — just a '
+               'chocolate-bronze wedge with a bar of amber light across its '
+               'nose. The stand was silent, and that was rather the point.',
+        'author': 'Doris from Sector 7',
+        'date': 'August 1959',
+        'plate': 'II',
+        'image': 'car-2.jpg',
+        'readtime': '5 minutes',
+        'pull': 'It arrived on a plain cream floor with no turntable, no band, '
+                'and no fins. Half the hall walked straight past. The other '
+                'half has not stopped talking since.',
+        'body': [
+            'Everything else on the floor this season is chrome and altitude. '
+            'This is one unbroken plane from windscreen to bumper, painted the '
+            'brown of a good chocolate, and it was shown on bare cream carpet '
+            'without so much as a spotlight. We have thought about little else '
+            'for a week.',
+            'Consider the face. There is no grille in the ornamental sense — '
+            'only a recessed panel with two bars of amber light set into it, '
+            'burning steadily even under the hall lighting, and a small shield '
+            'badge placed dead center. That is the entire front of the '
+            'motorcar. No teeth, no jet intake, no eyebrows.',
+            'The profile is stranger still. The glasshouse sits far back, the '
+            'roofline falls in a single straight run to a tail cut off as '
+            'though with a bandsaw, and the rear quarter carries a bank of '
+            'narrow louvres where a window would traditionally go. The wheels '
+            'are flat dark discs: no spokes, no whitewall, no spinner.',
+            'Will it date? Everything dates. But the things that age worst are '
+            'the things that shout, and this one declines to raise its voice. '
+            'Brown, of all colors, and we cannot stop looking at it.',
+        ],
+    },
+    {
+        'id': 'atomic-comet',
+        'kicker': 'ROAD TEST',
+        'title': 'The Atomic Comet Spider: Cherry Red and No Roof At All',
+        'dek': 'A wraparound screen, two faired headrest humps, and a shield '
+               'grille you could post a letter in. We took the Comet Spider '
+               'out on a grey Tuesday and came back grinning like idiots.',
+        'author': 'Bex "Leadfoot" Corvair',
+        'date': 'September 1959',
+        'plate': 'III',
+        'image': 'car-3.jpg',
+        'readtime': '7 minutes',
+        'pull': 'The screen wraps so far around the cockpit that the weather '
+                'gives up somewhere behind your ears.',
+        'body': [
+            'It was waiting on the gravel apron outside the design block, the '
+            'glass wall of the building throwing the whole car back at itself '
+            'in cherry red. Long hood, headlamps drawn out into thin lit '
+            'slivers, and beneath them a shield grille deep enough to lose a '
+            'mailbox in. Photographs flatter most cars. This one they '
+            'undersell.',
+            'The cockpit seats two and hides nothing. A single curved screen, '
+            'capped with a painted white header rail, sweeps around to meet '
+            'the faired humps behind each headrest. There is no roof. The '
+            'works insist one is "in preparation"; the works have been '
+            'insisting this since spring, and we suspect nobody there is in '
+            'any hurry.',
+            'On paper the thing ought to push wide at every corner — most of '
+            'the mass sits ahead of the driver. In practice the nose simply '
+            'goes where you look. The polished four-hole alloys spent our '
+            'entire morning on damp gravel and never once threatened to change '
+            'the subject.',
+            'A grey Tuesday, a car with no roof, and a photographer '
+            'complaining about the light. We would do it again tomorrow, and '
+            'so, reader, would you.',
+        ],
+    },
+    {
+        'id': 'twin-bubble',
+        'kicker': 'CONSUMER WATCH',
+        'title': 'The Twin-Bubble Problem: Two Canopies, Two Sunburns',
+        'dek': 'Side-by-side clear domes look magnificent in the brochure '
+               'plate. Our postbag reports they also cook the driver and the '
+               'passenger entirely independently of one another.',
+        'author': 'Buzz @ Tomorrow Motors',
+        'date': 'October 1959',
+        'plate': 'IV',
+        'image': 'car-4.jpg',
+        'readtime': '6 minutes',
+        'pull': '"Ventilated," in our experience, is the word a salesman '
+                'reaches for moments before your collar disagrees.',
+        'body': [
+            'Look at the plate on this page and you will understand why anyone '
+            'signs the paperwork. Twin white stripes running the length of a '
+            'nose you could measure in city blocks, wire wheels with chrome '
+            'knock-off spinners, a spine down the tail, and two clear domes '
+            'raised over the seats like soap bubbles caught mid-rise.',
+            'Now read our postbag. Because each dome seals on its own, the two '
+            'occupants bake at their own private rate and arrive unable to '
+            'agree on whose fault it was. One reader reports excellent '
+            'visibility and a ruined hat. Another enclosed a photograph of the '
+            'tan line, which is shaped, uncannily, like a bubble.',
+            'The manufacturers maintain the canopies are ventilated when '
+            'operated as directed. Having read the directions — nine pages, '
+            'four of them warnings, one of them concerning the correct way to '
+            'open your own door from the inside — we suspect "as directed" is '
+            'doing a great deal of heavy lifting.',
+            'Our advice stands: a wide brim, a light shirt, and a clear-eyed '
+            'acceptance that you are now visible from every window on the '
+            'street. The golden rule of dome ownership has not changed. Wave '
+            'back.',
+        ],
+    },
+]
+
+# Unpublished drafts — only the Editor's Desk (role: editor) may see these.
+DRAFTS = [
+    {
+        'title': 'EMBARGOED: The 1960 Line — Fusion Fins & Folding Wings',
+        'note': 'Full spec sheet under wraps until the auto show. Do not leak.',
+    },
+    {
+        'title': 'SCOOP: Tomorrow Motors\' Secret Anti-Gravity Test Track',
+        'note': 'Photos pending legal review. Source wants a byline.',
+    },
+]
+
+
+PROTECTED_FILES = frozenset(
+    [os.path.realpath(os.path.join(KEYS_DIR, name))
+     for name in ('reader.key', 'editor.key')]
+    + [os.path.realpath(FLAG_PATH)]
+)
+
+
+def key_path(kid):
+    return os.path.join(KEYS_DIR, kid)
+
+
+def is_protected(kid):
+    try:
+        return os.path.realpath(key_path(kid)) in PROTECTED_FILES
+    except (OSError, ValueError):
+        return True
+
+
+def load_key(kid):
+    with open(key_path(kid), 'rb') as f:
+        return f.read()
+
+
+def current_reader():
+    """Return {'sub', 'role'} for a valid pass cookie, or None.
+
+    This is the ordinary read gate: it verifies the pass against its declared
+    `kid` key (the same convention the whole site uses) and any valid pass —
+    reader or editor — counts as signed in. A missing or tampered pass simply
+    reads as "not signed in". The Editor's Desk does its own, louder
+    verification (with the debug disclosure); this helper stays quiet.
+    """
+    token = request.cookies.get('token')
+    if not token:
+        return None
+    try:
+        header = jwt.get_unverified_header(token)
+        key = load_key(header.get('kid', 'reader.key'))
+        claims = jwt.decode(token, key, algorithms=['HS256'])
+        return {'sub': claims.get('sub'), 'role': claims.get('role', 'reader')}
+    except Exception:  # noqa: BLE001 - a bad/tampered/absent pass just reads as guest
+        return None
+
+
+@app.after_request
+def no_store(resp):
+    # Every rendered page reflects the (cookie-based) pass state, so a browser
+    # must never serve a cached copy — otherwise a full article viewed while
+    # holding a pass would reappear after sign-out, defeating the read gate.
+    # Static assets (the public stylesheet) stay cacheable.
+    if not request.path.startswith(('/static/', '/images/')):
+        resp.headers['Cache-Control'] = 'no-store'
+    return resp
+
+
+@app.route('/images/<path:filename>')
+def images(filename):
+    """Serve the editorial plate photographs from the images folder."""
+    return send_from_directory(IMAGES_DIR, filename)
+
+
+@app.route('/')
+def index():
+    # Public front page of columns. Server-renders the reader's sign-in state
+    # from the pass cookie so the header strip is accurate.
+    return render_template('index.html', articles=ARTICLES, reader=current_reader())
+
+
+@app.route('/article/<article_id>')
+def article(article_id):
+    """A single column. Reading the full text requires a valid reader pass."""
+    art = next((a for a in ARTICLES if a['id'] == article_id), None)
+    reader = current_reader()
+    if art is None:
+        return render_template('article.html', reader=reader, not_found=True), 404
+    if not reader:
+        # Subscribers-only: no pass, no full text.
+        return render_template('article.html', article=art, reader=None, gated=True), 401
+    return render_template('article.html', article=art, reader=reader)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        name = (request.form.get('name') or 'reader').strip() or 'reader'
+        # Every visitor gets a low-privilege reader pass, signed with the
+        # reader key and tagged with `kid: reader.key`.
+        token = jwt.encode(
+            {'sub': name, 'role': 'reader'},
+            READER_KEY,
+            algorithm='HS256',
+            headers={'kid': 'reader.key'},
+        )
+        resp = make_response(redirect(url_for('index')))
+        resp.set_cookie('token', token)
+        return resp
+    return render_template('login.html')
+
+
+@app.route('/admin')
+def admin():
+    """The Editor's Desk. Only an `editor` pass may read the unpublished scoops."""
+    token = request.cookies.get('token')
+    if not token:
+        return render_template('admin.html', need_pass=True), 401
+
+    try:
+        header = jwt.get_unverified_header(token)
+    except Exception as e:  # noqa: BLE001 - malformed token
+        return render_template('admin.html', error='BAD PASS :: ' + str(e)), 401
+
+    kid = header.get('kid', 'reader.key')
+    try:
+        key = load_key(kid)
+    except Exception as e:  # noqa: BLE001 - file not found etc.
+        return render_template('admin.html', error='KEY LOAD FAILED :: ' + str(e), kid=kid), 401
+
+    try:
+        claims = jwt.decode(token, key, algorithms=['HS256'])
+    except Exception as e:
+        if is_protected(kid):
+            return render_template(
+                'admin.html',
+                error='PASS REJECTED :: ' + str(e),
+                kid=kid,
+                withheld=True,
+            ), 401
+        disclosed = key.decode('utf-8', errors='replace')
+        return render_template(
+            'admin.html',
+            error='PASS REJECTED :: ' + str(e),
+            kid=kid,
+            disclosed=disclosed,
+        ), 401
+
+    role = claims.get('role', 'reader')
+    if role != 'editor':
+        return render_template('admin.html', claims=claims, role=role, denied=True), 403
+
+    return render_template('admin.html', claims=claims, role=role,
+                           drafts=DRAFTS, flag=FLAG)
+
+
+@app.route('/logout')
+def logout():
+    resp = make_response(redirect(url_for('index')))
+    resp.delete_cookie('token')
+    return resp
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)

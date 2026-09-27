@@ -1,0 +1,58 @@
+HTTP/2 200 
+server: nginx
+date: Sun, 27 Sep 2026 03:02:22 GMT
+content-type: text/html; charset=utf-8
+content-length: 1666
+x-powered-by: Express
+etag: W/"682-blZr+voXrjLRyRMgsr4Piy9W2u4"
+cache-control: no-store
+x-content-type-options: nosniff
+referrer-policy: no-referrer
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CookieCorp | Quality Inspection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Orbitron:wght@500;700&family=Jost:wght@400;600&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/retro.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/" class="brand"><span class="rocket">&#9733;</span> CookieCorp</a>
+      <div>
+        
+          <a href="/dashboard">Console</a>
+          <a href="/builder">Fabricator</a>
+          <a href="#" onclick="fetch('/logout',{method:'POST'}).then(()=>location.href='/');return false;">Log out (astrotest1)</a>
+        
+      </div>
+    </div>
+
+
+
+<div class="panel">
+  <span class="tag">Quality Inspector Console</span>
+  <h1>Inspecting: Test Batch</h1>
+  <p class="small-note">Batch 2f032638dc35054a79b2fd00 &middot; 2 ingredient(s) queued into the mixer.</p>
+  <div class="console" id="mixer-log"></div>
+</div>
+
+<script>
+  window.__recipe = {"id":"2f032638dc35054a79b2fd00","ingredients":[{"name":"flour","value":"2cups"},{"name":"sugar","value":"1cup"}]};
+</script>
+<script src="/static/js/mixer.js"></script>
+
+
+    <div class="footer">
+      &#9733; CookieCorp Confectionery Systems &mdash; "A Better Cookie for a Brighter Tomorrow!" &#9733;<br />
+      Est. 1962 &middot; Orbital City, Sector 7
+    </div>
+  </div>
+</body>
+</html>
+

