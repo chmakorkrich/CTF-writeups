@@ -32,7 +32,8 @@ CTF-writeups/
 | [welcomecall](Sunshine-CTF-2026/welcomecall) | Network Forensics / Audio | `sun{thankyouforplaying}` |
 | [you-are-kidding-me](Sunshine-CTF-2026/you-are-kidding-me) | Web (500) | `sun{h0tw1r3d_4dm1n_jwt}` |
 
-> `cookiecorp` is a work-in-progress challenge with no writeup yet.
+> `cookiecorp` is still work-in-progress and is intentionally not published yet
+> (untracked via `.gitignore` until the writeup is ready).
 
 ## Reproducing a solve
 
